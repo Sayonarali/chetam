@@ -1,0 +1,5 @@
+bin/
+.dev/
+.env
+.idea
+wire_gen.go

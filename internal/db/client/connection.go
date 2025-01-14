@@ -13,7 +13,7 @@ type Config struct {
 }
 
 type ChetamFetcher struct {
-	c *sql.DB
+	C *sql.DB
 }
 
 func NewDBFetcher(cfg Config) (*ChetamFetcher, error) {
@@ -30,6 +30,6 @@ func NewDBFetcher(cfg Config) (*ChetamFetcher, error) {
 	}
 
 	return &ChetamFetcher{
-		c: db,
+		C: db,
 	}, nil
 }

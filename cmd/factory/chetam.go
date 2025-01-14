@@ -5,6 +5,7 @@ import (
 	dbClient "chetam/internal/db/client"
 	chetam "chetam/internal/service"
 	"chetam/internal/service/auth"
+	"chetam/internal/service/repository"
 	"github.com/google/wire"
 	"log/slog"
 )
@@ -13,6 +14,7 @@ var chSet = wire.NewSet(
 	provideChetam,
 	provideAuthService,
 	provideChetamFetcher,
+	provideRepositoryKeeper,
 )
 
 func provideChetam(
@@ -23,12 +25,14 @@ func provideChetam(
 	return chetam.New(lg, &as, chf)
 }
 
-func provideAuthService() (auth.Service, error) {
+func provideAuthService(
+	rk repository.Keeper,
+) (auth.Service, error) {
 	c := auth.Config{}
 	if err := cfg.Parse(&c); err != nil {
 		return auth.Service{}, err
 	}
-	return auth.NewAuthService(c), nil
+	return auth.NewAuthService(c, rk), nil
 }
 
 func provideChetamFetcher() (*dbClient.ChetamFetcher, error) {
@@ -37,4 +41,8 @@ func provideChetamFetcher() (*dbClient.ChetamFetcher, error) {
 		return nil, err
 	}
 	return dbClient.NewDBFetcher(c)
+}
+
+func provideRepositoryKeeper(chf *dbClient.ChetamFetcher) (repository.Keeper, error) {
+	return repository.NewRepositoryKeeper(chf), nil
 }

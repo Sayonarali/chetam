@@ -2,6 +2,7 @@ package auth
 
 import (
 	"chetam/cfg"
+	"chetam/internal/service/repository"
 	"encoding/json"
 	"fmt"
 	"github.com/golang-jwt/jwt/v4"
@@ -14,12 +15,14 @@ type Config struct {
 }
 
 type Service struct {
-	cfg Config
+	cfg              Config
+	repositoryKeeper repository.Keeper
 }
 
-func NewAuthService(c Config) Service {
+func NewAuthService(c Config, rk repository.Keeper) Service {
 	return Service{
-		cfg: c,
+		cfg:              c,
+		repositoryKeeper: rk,
 	}
 }
 
@@ -29,15 +32,15 @@ type Claims struct {
 }
 
 func (s Service) Register(w http.ResponseWriter, r *http.Request) {
-	//var req struct {
-	//	Username string `json:"username"`
-	//	Password string `json:"password"`
-	//}
-	//
-	//if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-	//	http.Error(w, "Invalid request", http.StatusBadRequest)
-	//	return
-	//}
+	var req struct {
+		Username string `json:"username"`
+		Password string `json:"password"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request", http.StatusBadRequest)
+		return
+	}
 }
 
 func (s Service) Login(w http.ResponseWriter, r *http.Request) {
@@ -51,9 +54,17 @@ func (s Service) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	password, _ := s.repositoryKeeper.FindUserByLogin(req.Username)
+	fmt.Println(password)
+	if password != req.Password {
+		http.Error(w, "Invalid request", http.StatusBadRequest)
+		return
+	}
+
 	token, err := s.generateJWT(req.Username)
 	if err != nil {
 		http.Error(w, "Invalid request generate JWT", http.StatusBadRequest)
+		return
 	}
 
 	resp := struct {

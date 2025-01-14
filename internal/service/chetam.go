@@ -28,10 +28,7 @@ func New(
 	}
 }
 
-func (c Chetam) Execute() {
-	r := mux.NewRouter()
-
-	r.HandleFunc("/api/v1/auth/register", c.authService.Register).Methods("POST")
+func (c Chetam) Execute(r *mux.Router) {
 	r.HandleFunc("/api/v1/auth/login", c.authService.Login).Methods("POST")
-
+	r.HandleFunc("/api/v1/auth/register", c.authService.Register).Methods("POST")
 }

@@ -10,7 +10,7 @@ import (
 )
 
 type Config struct {
-	cfg.JWT `envPrefix:"JWT"`
+	cfg.JWT `envPrefix:"JWT_"`
 }
 
 type Service struct {
@@ -73,9 +73,9 @@ func (s Service) generateJWT(username string) (string, error) {
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	tokenString, err := token.SignedString(s.cfg.SecretKey)
+	tokenString, err := token.SignedString([]byte(s.cfg.SecretKey))
 	if err != nil {
-		return "", err
+		return err.Error(), err
 	}
 
 	return tokenString, nil

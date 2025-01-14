@@ -9,7 +9,7 @@ import (
 )
 
 type Config struct {
-	cfg.DB `envPrefix:"DB"`
+	cfg.DB `envPrefix:"DB_"`
 }
 
 type ChetamFetcher struct {
@@ -17,8 +17,8 @@ type ChetamFetcher struct {
 }
 
 func NewDBFetcher(cfg Config) (*ChetamFetcher, error) {
-	connStr := fmt.Sprintf("host=%s port=%d user=%s dbname=%s sslmode=disable",
-		cfg.DB.Host, cfg.DB.Port, cfg.DB.User, cfg.DB.Name)
+	connStr := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable",
+		"postgres", 5432, "root", "root", "chetam")
 
 	db, err := sql.Open("postgres", connStr)
 	if err != nil {

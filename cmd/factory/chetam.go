@@ -3,36 +3,46 @@ package factory
 import (
 	"chetam/cfg"
 	dbClient "chetam/internal/db/client"
-	chetam "chetam/internal/service"
+	router "chetam/internal/service"
 	"chetam/internal/service/auth"
 	"chetam/internal/service/repository"
+	"chetam/internal/service/user"
 	"github.com/google/wire"
 	"log/slog"
 )
 
 var chSet = wire.NewSet(
-	provideChetam,
+	provideRouterHandler,
 	provideAuthService,
 	provideChetamFetcher,
 	provideRepositoryKeeper,
+	provideUserService,
 )
 
-func provideChetam(
+func provideRouterHandler(
 	lg *slog.Logger,
 	as auth.Service,
-	chf *dbClient.ChetamFetcher,
-) chetam.Chetam {
-	return chetam.New(lg, &as, chf)
+	us user.Service,
+) router.Router {
+	return router.New(lg, &us, &as)
+}
+
+func provideUserService(
+	rk repository.Keeper,
+	lg *slog.Logger,
+) (user.Service, error) {
+	return user.NewUserService(rk, lg), nil
 }
 
 func provideAuthService(
 	rk repository.Keeper,
+	lg *slog.Logger,
 ) (auth.Service, error) {
 	c := auth.Config{}
 	if err := cfg.Parse(&c); err != nil {
 		return auth.Service{}, err
 	}
-	return auth.NewAuthService(c, rk), nil
+	return auth.NewAuthService(c, rk, lg), nil
 }
 
 func provideChetamFetcher() (*dbClient.ChetamFetcher, error) {

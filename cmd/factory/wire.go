@@ -4,11 +4,11 @@
 package factory
 
 import (
-	chetam "chetam/internal/service"
+	router "chetam/internal/service"
 	"github.com/google/wire"
 )
 
-func InitializeChetam() (chetam.Chetam, error) {
+func InitializeRouter() (router.Router, error) {
 	panic(
 		wire.Build(
 			chSet,

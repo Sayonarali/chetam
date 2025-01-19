@@ -4,9 +4,14 @@ import (
 	"chetam/cfg"
 	"chetam/internal/service/repository"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/golang-jwt/jwt/v4"
+	"io"
+	"log"
+	"log/slog"
 	"net/http"
+	"net/url"
 	"time"
 )
 
@@ -15,37 +20,56 @@ type Config struct {
 }
 
 type Service struct {
+	lg               *slog.Logger
 	cfg              Config
 	repositoryKeeper repository.Keeper
 }
 
-func NewAuthService(c Config, rk repository.Keeper) Service {
-	return Service{
+func NewAuthService(c Config, rk repository.Keeper, lg *slog.Logger) Service {
+	service := Service{
+		lg:               lg,
 		cfg:              c,
 		repositoryKeeper: rk,
 	}
+	return service
 }
 
 type Claims struct {
-	Username string `json:"username"`
+	Login string `json:"login"`
 	jwt.RegisteredClaims
+}
+
+func (s Service) GenerateCode(w http.ResponseWriter, r *http.Request) {
+	baseUrl := "https://sms.ru/sms/send"
+
+	u, _ := url.Parse(baseUrl)
+	params := url.Values{}
+	params.Add("api_id", s.cfg.Sms)
+	params.Add("to", s.cfg.Phone)
+	params.Add("msg", "hi")
+	params.Add("json", "1")
+	u.RawQuery = params.Encode()
+
+	// Отправляем GET-запрос
+	resp, err := http.Get(u.String())
+	if err != nil {
+		log.Fatal("Error sending GET request:", err)
+	}
+	defer resp.Body.Close()
+
+	// Чтение ответа
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		log.Fatal("Error reading response body:", err)
+	}
+	fmt.Println("Response:", string(body))
+
 }
 
 func (s Service) Register(w http.ResponseWriter, r *http.Request) {
 	var req struct {
-		Username string `json:"username"`
-		Password string `json:"password"`
-	}
-
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request", http.StatusBadRequest)
-		return
-	}
-}
-
-func (s Service) Login(w http.ResponseWriter, r *http.Request) {
-	var req struct {
-		Username string `json:"username"`
+		Login    string `json:"login"`
+		Email    string `json:"email"`
 		Password string `json:"password"`
 	}
 
@@ -54,30 +78,39 @@ func (s Service) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	password, _ := s.repositoryKeeper.FindUserByLogin(req.Username)
-	fmt.Println(password)
-	if password != req.Password {
-		http.Error(w, "Invalid request", http.StatusBadRequest)
-		return
-	}
-
-	token, err := s.generateJWT(req.Username)
+	user, err := s.repositoryKeeper.CreateUser(req.Login, req.Email, req.Password)
 	if err != nil {
-		http.Error(w, "Invalid request generate JWT", http.StatusBadRequest)
+		http.Error(w, "Failed create user", http.StatusBadRequest)
 		return
 	}
-
-	resp := struct {
-		Token string `json:"token"`
-	}{Token: token}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(resp)
+	err = json.NewEncoder(w).Encode(user)
+	if err != nil {
+		return
+	}
 }
 
-func (s Service) generateJWT(username string) (string, error) {
+func (s Service) Login(login, password string) (string, error) {
+	user, err := s.repositoryKeeper.FindUserByLogin(login)
+	if err != nil {
+		s.lg.Warn(err.Error())
+		return "", err
+	} else if user.Password != password {
+		return "", errors.New("wrong password")
+	}
+
+	token, err := s.generateJWT(user.Login)
+	if err != nil {
+		return "", err
+	}
+
+	return token, nil
+}
+
+func (s Service) generateJWT(login string) (string, error) {
 	claims := Claims{
-		Username: username,
+		Login: login,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(72 * time.Hour)),
 		},

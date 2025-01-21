@@ -3,9 +3,9 @@ package factory
 import (
 	"chetam/cfg"
 	dbClient "chetam/internal/db/client"
-	router "chetam/internal/service"
 	"chetam/internal/service/auth"
 	"chetam/internal/service/repository"
+	"chetam/internal/service/router"
 	"chetam/internal/service/user"
 	"github.com/google/wire"
 	"log/slog"

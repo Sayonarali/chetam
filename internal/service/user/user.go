@@ -2,6 +2,7 @@ package user
 
 import (
 	"chetam/internal/service/repository"
+	chetamApiv1 "chetam/pkg/chetamApi/v1"
 	"log/slog"
 )
 
@@ -17,6 +18,16 @@ func NewUserService(rk repository.Keeper, lg *slog.Logger) Service {
 	}
 }
 
-func (s Service) GetUser() {
+func (s Service) GetUserByLogin(login string) (chetamApiv1.User, error) {
+	user, err := s.repositoryKeeper.FindUserByLogin(login)
+	if err != nil {
+		s.lg.Warn(err.Error())
+		return chetamApiv1.User{}, err
+	}
 
+	return chetamApiv1.User{
+		Email:  &user.Email,
+		Login:  &user.Login,
+		UserId: &user.Id,
+	}, nil
 }

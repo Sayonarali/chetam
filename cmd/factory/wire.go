@@ -4,7 +4,7 @@
 package factory
 
 import (
-	router "chetam/internal/service"
+	"chetam/internal/service/router"
 	"github.com/google/wire"
 )
 

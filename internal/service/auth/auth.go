@@ -125,9 +125,9 @@ func (s Service) generateJWT(login string) (string, error) {
 	return tokenString, nil
 }
 
-func (s Service) validateToken(tokenString string) (*Claims, error) {
+func (s Service) ValidateToken(tokenString string) (*Claims, error) {
 	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (interface{}, error) {
-		return s.cfg.SecretKey, nil
+		return []byte(s.cfg.SecretKey), nil
 	})
 	if err != nil {
 		return nil, err

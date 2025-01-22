@@ -3,7 +3,6 @@ package auth
 import (
 	"chetam/cfg"
 	"chetam/internal/service/repository"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/golang-jwt/jwt/v4"
@@ -66,29 +65,17 @@ func (s Service) GenerateCode(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func (s Service) Register(w http.ResponseWriter, r *http.Request) {
-	var req struct {
-		Login    string `json:"login"`
-		Email    string `json:"email"`
-		Password string `json:"password"`
-	}
-
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request", http.StatusBadRequest)
-		return
-	}
-
-	user, err := s.repositoryKeeper.CreateUser(req.Login, req.Email, req.Password)
+func (s Service) Register(email, login, password string) (string, error) {
+	user, err := s.repositoryKeeper.CreateUser(email, login, password)
 	if err != nil {
-		http.Error(w, "Failed create user", http.StatusBadRequest)
-		return
+		return "", err
+	}
+	token, err := s.generateJWT(user.Login)
+	if err != nil {
+		return "", err
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	err = json.NewEncoder(w).Encode(user)
-	if err != nil {
-		return
-	}
+	return token, nil
 }
 
 func (s Service) Login(login, password string) (string, error) {

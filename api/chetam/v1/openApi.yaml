@@ -3,9 +3,37 @@ info:
   title: chetam app API
   version: 1.0.0
 
+tags:
+  - name: Auth
+    description: register & login
+  - name: User
+    description: user data
+
 paths:
+  /api/v1/auth/register:
+    post:
+      tags:
+        - Auth
+      summary: Register and login new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterRequest"
+      responses:
+        "200":
+          description: Successful register
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RegisterResponse"
+        "400":
+          description: Inappropriate credentials
   /api/v1/auth/login:
     post:
+      tags:
+        - Auth
       summary: Login and generate JWT token
       requestBody:
         required: true
@@ -25,6 +53,8 @@ paths:
   /api/v1/user:
     summary: Get user info
     get:
+      tags:
+        - User
       security:
         - BearerAuth: [ ]
       responses:
@@ -39,6 +69,25 @@ paths:
 
 components:
   schemas:
+    RegisterRequest:
+      type: object
+      properties:
+        email:
+          type: string
+        login:
+          type: string
+        password:
+          type: string
+          format: password
+      required:
+        - email
+        - login
+        - password
+    RegisterResponse:
+      type: object
+      properties:
+        token:
+          type: string
     LoginRequest:
       type: object
       properties:

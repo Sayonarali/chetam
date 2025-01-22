@@ -26,6 +26,18 @@ type LoginResponse struct {
 	Token *string `json:"token,omitempty"`
 }
 
+// RegisterRequest defines model for RegisterRequest.
+type RegisterRequest struct {
+	Email    string `json:"email"`
+	Login    string `json:"login"`
+	Password string `json:"password"`
+}
+
+// RegisterResponse defines model for RegisterResponse.
+type RegisterResponse struct {
+	Token *string `json:"token,omitempty"`
+}
+
 // User defines model for User.
 type User struct {
 	Email  *string `json:"email,omitempty"`
@@ -36,11 +48,17 @@ type User struct {
 // PostApiV1AuthLoginJSONRequestBody defines body for PostApiV1AuthLogin for application/json ContentType.
 type PostApiV1AuthLoginJSONRequestBody = LoginRequest
 
+// PostApiV1AuthRegisterJSONRequestBody defines body for PostApiV1AuthRegister for application/json ContentType.
+type PostApiV1AuthRegisterJSONRequestBody = RegisterRequest
+
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
 	// Login and generate JWT token
 	// (POST /api/v1/auth/login)
 	PostApiV1AuthLogin(w http.ResponseWriter, r *http.Request)
+	// Register and login new user
+	// (POST /api/v1/auth/register)
+	PostApiV1AuthRegister(w http.ResponseWriter, r *http.Request)
 
 	// (GET /api/v1/user)
 	GetApiV1User(w http.ResponseWriter, r *http.Request)
@@ -53,6 +71,12 @@ type Unimplemented struct{}
 // Login and generate JWT token
 // (POST /api/v1/auth/login)
 func (_ Unimplemented) PostApiV1AuthLogin(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Register and login new user
+// (POST /api/v1/auth/register)
+func (_ Unimplemented) PostApiV1AuthRegister(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -75,6 +99,20 @@ func (siw *ServerInterfaceWrapper) PostApiV1AuthLogin(w http.ResponseWriter, r *
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.PostApiV1AuthLogin(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PostApiV1AuthRegister operation middleware
+func (siw *ServerInterfaceWrapper) PostApiV1AuthRegister(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PostApiV1AuthRegister(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -219,6 +257,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/api/v1/auth/login", wrapper.PostApiV1AuthLogin)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/api/v1/auth/register", wrapper.PostApiV1AuthRegister)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/api/v1/user", wrapper.GetApiV1User)

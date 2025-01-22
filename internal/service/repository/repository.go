@@ -34,7 +34,7 @@ func (k Keeper) FindUserByLogin(login string) (models.User, error) {
 	return user, nil
 }
 
-func (k Keeper) CreateUser(login, email, password string) (models.User, error) {
+func (k Keeper) CreateUser(email, login, password string) (models.User, error) {
 	user := models.User{}
 
 	createQuery, args, err := sq.Insert("users").Columns("login", "email", "password").Values(login, email, password).ToSql()

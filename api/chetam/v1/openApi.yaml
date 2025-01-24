@@ -74,11 +74,14 @@ components:
       properties:
         email:
           type: string
+          nullable: false
         login:
           type: string
+          nullable: false
         password:
           type: string
           format: password
+          nullable: false
       required:
         - email
         - login

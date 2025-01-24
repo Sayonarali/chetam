@@ -8,6 +8,9 @@ WORKDIR /app
 COPY . .
 RUN go mod tidy
 
+RUN go install github.com/google/wire/cmd/wire@latest && \
+	wire ./cmd/factory &&
+
 RUN go build -o /app/main ./cmd
 
 # Открываем порт

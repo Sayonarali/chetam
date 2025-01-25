@@ -10,6 +10,9 @@ import (
 func (rt Router) GetApiV1User(w http.ResponseWriter, r *http.Request) {
 	token := TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
 
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode("well well well")
+
 	fmt.Println(token)
 	claims, err := rt.authService.ValidateToken(token)
 

@@ -22,6 +22,7 @@ func (rt Router) PostApiV1AuthRegister(w http.ResponseWriter, r *http.Request) {
 	resp := chetamApiv1.RegisterResponse{Token: &token}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(resp)
+
 }
 
 func (rt Router) PostApiV1AuthLogin(w http.ResponseWriter, r *http.Request) {

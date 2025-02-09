@@ -5,3 +5,7 @@ type JWT struct {
 	Sms       string `env:"SMS"`
 	Phone     string `env:"PHONE"`
 }
+
+type SRV struct {
+	PORT string `env:"PORT"`
+}

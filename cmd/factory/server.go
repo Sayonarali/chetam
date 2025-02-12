@@ -2,12 +2,12 @@ package factory
 
 import (
 	"chetam/internal/http/srv"
-	"chetam/internal/service"
+	"chetam/internal/services"
 	"github.com/google/wire"
 	"log/slog"
 )
 
-var chSet = wire.NewSet(
+var srvSet = wire.NewSet(
 	provideServer,
 	provideAuthService,
 	provideUserService,
@@ -17,7 +17,7 @@ var chSet = wire.NewSet(
 
 func provideServer(
 	lg *slog.Logger,
-	service *service.Service,
+	service *services.Service,
 ) srv.Server {
 	return srv.New(lg, service)
 }

@@ -2,7 +2,7 @@ package srv
 
 import (
 	"chetam/cfg"
-	"chetam/internal/service"
+	"chetam/internal/services"
 	"context"
 	"errors"
 	"fmt"
@@ -42,10 +42,10 @@ type Config struct {
 type Server struct {
 	cfg     Config
 	lg      *slog.Logger
-	service *service.Service
+	service *services.Service
 }
 
-func New(logger *slog.Logger, service *service.Service) Server {
+func New(logger *slog.Logger, service *services.Service) Server {
 	c := Config{}
 	if err := cfg.Parse(&c); err != nil {
 		panic(fmt.Errorf("no env for server: %w", err))

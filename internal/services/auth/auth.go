@@ -1,35 +1,32 @@
 package auth
 
 import (
-	"chetam/cfg"
-	"chetam/internal/service/repository"
-	"errors"
+	"chetam/internal/config"
+	"chetam/internal/transport/repository"
 	"fmt"
-	"github.com/golang-jwt/jwt/v4"
 	"io"
 	"log"
 	"log/slog"
 	"net/http"
 	"net/url"
 	"time"
+
+	"github.com/golang-jwt/jwt/v4"
 )
 
-type Config struct {
-	cfg.JWT `envPrefix:"JWT_"`
-}
-
 type Service struct {
-	lg               *slog.Logger
-	cfg              Config
-	repositoryKeeper repository.Keeper
+	cfg  *config.Config
+	lg   *slog.Logger
+	repo *repository.Repository
 }
 
-func NewAuthService(c Config, rk repository.Keeper, lg *slog.Logger) Service {
-	service := Service{
-		lg:               lg,
-		cfg:              c,
-		repositoryKeeper: rk,
+func New(cfg *config.Config, lg *slog.Logger, repo *repository.Repository) *Service {
+	service := &Service{
+		cfg:  cfg,
+		lg:   lg,
+		repo: repo,
 	}
+
 	return service
 }
 
@@ -38,24 +35,22 @@ type Claims struct {
 	jwt.RegisteredClaims
 }
 
-func (s Service) GenerateCode(w http.ResponseWriter, r *http.Request) {
+func (s *Service) GenerateCode(w http.ResponseWriter, r *http.Request) {
 	baseUrl := "https://sms.ru/sms/send"
 
 	u, _ := url.Parse(baseUrl)
 	params := url.Values{}
-	params.Add("api_id", s.cfg.Sms)
-	params.Add("to", s.cfg.Phone)
+	params.Add("api_id", s.cfg.Jwt.Sms)
+	params.Add("to", s.cfg.Jwt.Phone)
 	params.Add("msg", "hi")
 	params.Add("json", "1")
 	u.RawQuery = params.Encode()
-
 	// Отправляем GET-запрос
 	resp, err := http.Get(u.String())
 	if err != nil {
 		log.Fatal("Error sending GET request:", err)
 	}
 	defer resp.Body.Close()
-
 	// Чтение ответа
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -65,37 +60,38 @@ func (s Service) GenerateCode(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func (s Service) Register(email, login, password string) (string, error) {
-	user, err := s.repositoryKeeper.CreateUser(email, login, password)
+func (s *Service) Register(email, login, password string) (string, error) {
+	user, err := s.repo.CreateUser(email, login, password)
 	if err != nil {
 		return "", err
 	}
+
 	token, err := s.generateJWT(user.Login)
 	if err != nil {
 		return "", err
 	}
-
 	return token, nil
 }
 
-func (s Service) Login(login, password string) (string, error) {
-	user, err := s.repositoryKeeper.FindUserByLogin(login)
+func (s *Service) Login(login, password string) (string, error) {
+	user, err := s.repo.FindUserByLogin(login)
 	if err != nil {
-		s.lg.Warn(err.Error())
+		s.lg.Warn("user not found",
+			slog.String("error", err.Error()))
+
 		return "", err
 	} else if user.Password != password {
-		return "", errors.New("wrong password")
+		return "", fmt.Errorf("password incorrect")
 	}
 
 	token, err := s.generateJWT(user.Login)
 	if err != nil {
 		return "", err
 	}
-
 	return token, nil
 }
 
-func (s Service) generateJWT(login string) (string, error) {
+func (s *Service) generateJWT(login string) (string, error) {
 	claims := Claims{
 		Login: login,
 		RegisteredClaims: jwt.RegisteredClaims{
@@ -104,7 +100,7 @@ func (s Service) generateJWT(login string) (string, error) {
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	tokenString, err := token.SignedString([]byte(s.cfg.SecretKey))
+	tokenString, err := token.SignedString([]byte(s.cfg.Jwt.SecretKey))
 	if err != nil {
 		return err.Error(), err
 	}
@@ -112,13 +108,14 @@ func (s Service) generateJWT(login string) (string, error) {
 	return tokenString, nil
 }
 
-func (s Service) ValidateToken(tokenString string) (*Claims, error) {
+func (s *Service) ValidateToken(tokenString string) (*Claims, error) {
 	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (interface{}, error) {
-		return []byte(s.cfg.SecretKey), nil
+		return []byte(s.cfg.Jwt.SecretKey), nil
 	})
 	if err != nil {
 		return nil, err
 	}
+
 	if claims, ok := token.Claims.(*Claims); ok && token.Valid {
 		return claims, nil
 	} else {

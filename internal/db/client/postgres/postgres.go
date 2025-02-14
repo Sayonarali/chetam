@@ -1,13 +1,13 @@
 package postgres
 
 import (
-	"chetam/internal/cfg"
+	"chetam/internal/config"
 	"context"
 	"fmt"
 	"github.com/jackc/pgx/v5"
 )
 
-func NewClient(cfg *cfg.Config) (*pgx.Conn, error) {
+func NewClient(cfg *config.Config) (*pgx.Conn, error) {
 	dsn := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable",
 		cfg.DB.User,
 		cfg.DB.Password,

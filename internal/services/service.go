@@ -1,18 +1,18 @@
 package services
 
 import (
-	"chetam/internal/services/auth"
-	"chetam/internal/services/user"
+	"chetam/internal/auth"
+	"log/slog"
 )
 
 type Services struct {
-	user *user.Service
-	auth *auth.Service
+	logger *slog.Logger
+	auth   *auth.Auth
 }
 
-func New(userService *user.Service, authService *auth.Service) *Services {
+func New(logger *slog.Logger, auth *auth.Auth) *Services {
 	return &Services{
-		user: userService,
-		auth: authService,
+		logger: logger,
+		auth:   auth,
 	}
 }

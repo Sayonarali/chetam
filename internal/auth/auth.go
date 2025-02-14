@@ -4,30 +4,27 @@ import (
 	"chetam/internal/config"
 	"chetam/internal/transport/repository"
 	"fmt"
+	"github.com/golang-jwt/jwt/v4"
 	"io"
 	"log"
 	"log/slog"
 	"net/http"
 	"net/url"
 	"time"
-
-	"github.com/golang-jwt/jwt/v4"
 )
 
-type Service struct {
+type Auth struct {
 	cfg  *config.Config
 	lg   *slog.Logger
 	repo *repository.Repository
 }
 
-func New(cfg *config.Config, lg *slog.Logger, repo *repository.Repository) *Service {
-	service := &Service{
+func New(cfg *config.Config, lg *slog.Logger, repo *repository.Repository) *Auth {
+	return &Auth{
 		cfg:  cfg,
 		lg:   lg,
 		repo: repo,
 	}
-
-	return service
 }
 
 type Claims struct {
@@ -35,7 +32,7 @@ type Claims struct {
 	jwt.RegisteredClaims
 }
 
-func (s *Service) GenerateCode(w http.ResponseWriter, r *http.Request) {
+func GenerateCode(w http.ResponseWriter, r *http.Request) {
 	baseUrl := "https://sms.ru/sms/send"
 
 	u, _ := url.Parse(baseUrl)
@@ -60,7 +57,7 @@ func (s *Service) GenerateCode(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func (s *Service) Register(email, login, password string) (string, error) {
+func Register(email, login, password string) (string, error) {
 	user, err := s.repo.CreateUser(email, login, password)
 	if err != nil {
 		return "", err
@@ -73,7 +70,7 @@ func (s *Service) Register(email, login, password string) (string, error) {
 	return token, nil
 }
 
-func (s *Service) Login(login, password string) (string, error) {
+func Login(login, password string) (string, error) {
 	user, err := s.repo.FindUserByLogin(login)
 	if err != nil {
 		s.lg.Warn("user not found",
@@ -91,7 +88,7 @@ func (s *Service) Login(login, password string) (string, error) {
 	return token, nil
 }
 
-func (s *Service) generateJWT(login string) (string, error) {
+func generateJWT(login string) (string, error) {
 	claims := Claims{
 		Login: login,
 		RegisteredClaims: jwt.RegisteredClaims{
@@ -108,7 +105,7 @@ func (s *Service) generateJWT(login string) (string, error) {
 	return tokenString, nil
 }
 
-func (s *Service) ValidateToken(tokenString string) (*Claims, error) {
+func ValidateToken(tokenString string) (*Claims, error) {
 	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (interface{}, error) {
 		return []byte(s.cfg.Jwt.SecretKey), nil
 	})

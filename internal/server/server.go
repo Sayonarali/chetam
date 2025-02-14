@@ -1,11 +1,11 @@
-package srv
+package server
 
 import (
-	"chetam/cfg"
+	"chetam/internal/config"
+	"chetam/internal/server/handlers"
 	"chetam/internal/services"
 	"context"
 	"errors"
-	"fmt"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/riandyrn/otelchi"
@@ -35,29 +35,21 @@ const (
 	serverName = "chetam"
 )
 
-type Config struct {
-	cfg.SRV `envPrefix:"SRV_"`
-}
-
 type Server struct {
-	cfg     Config
-	lg      *slog.Logger
-	service *services.Service
+	cfg      *config.Config
+	lg       *slog.Logger
+	services *services.Services
 }
 
-func New(logger *slog.Logger, service *services.Service) Server {
-	c := Config{}
-	if err := cfg.Parse(&c); err != nil {
-		panic(fmt.Errorf("no env for server: %w", err))
-	}
-	return Server{
-		cfg:     c,
-		lg:      logger,
-		service: service,
+func New(cfg *config.Config, logger *slog.Logger, services *services.Services) *Server {
+	return &Server{
+		services: services,
+		cfg:      cfg,
+		lg:       logger,
 	}
 }
 
-func (s *Server) Start() {
+func (s *Server) Run() {
 	tp := initTracerProvider()
 	defer func() {
 		if err := tp.Shutdown(context.Background()); err != nil {
@@ -73,6 +65,7 @@ func (s *Server) Start() {
 	otel.SetMeterProvider(mp)
 
 	baseCfg := otelchimetric.NewBaseConfig(serverName, otelchimetric.WithMeterProvider(mp))
+
 	r := chi.NewRouter()
 
 	r.Use(middleware.Timeout(30 * time.Second))
@@ -82,17 +75,9 @@ func (s *Server) Start() {
 		otelchimetric.NewRequestInFlight(baseCfg),
 		otelchimetric.NewResponseSizeBytes(baseCfg),
 	)
-	r.Route("/users", func(r chi.Router) {
-		r.Get("/", s.getUsersHandler)
-		r.Post("/add", s.addUserHandler)
-		r.Patch("/{user}", s.updateUserHandler)
-		r.Delete("/{user}", s.deleteUserHandler)
-	})
-
-	r.Route("/tasks", func(r chi.Router) {
-		r.Get("/{user}", s.getTasksHandler)
-		r.Post("/start", s.addTaskHandler)
-		r.Post("/end", s.endTaskHandler)
+	r.Route("/api/v1", func(r chi.Router) {
+		r.Get("/register", handlers.Register(s.lg, s.services))
+		r.Get("/auth", handlers.Auth(s.lg, s.services))
 	})
 
 	//r.Get("/swagger/*", httpSwagger.Handler(
@@ -100,13 +85,13 @@ func (s *Server) Start() {
 	//))
 
 	s.lg.Info("starting server",
-		slog.String("address", ":"+s.cfg.PORT))
+		slog.String("address", ":"+s.cfg.Server.Port))
 
 	done := make(chan os.Signal, 1)
 	signal.Notify(done, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
 
 	srv := &http.Server{
-		Addr:         ":" + s.cfg.PORT,
+		Addr:         ":" + s.cfg.Server.Port,
 		Handler:      r,
 		ReadTimeout:  5 * time.Second,
 		WriteTimeout: 5 * time.Second,

@@ -1,4 +1,4 @@
-package cfg
+package config
 
 import (
 	"fmt"
@@ -8,8 +8,13 @@ import (
 )
 
 type Config struct {
-	DB  Database
-	Jwt JWT
+	DB     Database
+	Jwt    JWT
+	Server Server
+}
+
+type Server struct {
+	Port string `env:"SRV_PORT"`
 }
 
 type Database struct {
@@ -27,17 +32,12 @@ type JWT struct {
 }
 
 func Load() (*Config, error) {
-	// читаем переменные окружения из фпйла
-	// если не прочитали возвращаем ошибку
-
-	if err := godotenv.Load("./.env.example"); err != nil {
+	if err := godotenv.Load("./.env"); err != nil {
 		return nil, fmt.Errorf("failed to load .env: %w", err)
 	}
 
 	var cfg Config
 
-	// парсим переменные в структуру конфига
-	// если не смогли распарсить возвращаем ошибку
 	err := cleanenv.ReadEnv(&cfg)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read env: %w", err)

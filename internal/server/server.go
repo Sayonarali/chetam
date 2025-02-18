@@ -2,13 +2,15 @@ package server
 
 import (
 	"chetam/internal/config"
+	"chetam/internal/model"
+	chetamApiv1 "chetam/internal/server/client/v1"
 	"chetam/internal/server/handlers"
-	"chetam/internal/services"
 	"context"
 	"errors"
-	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
-	"github.com/riandyrn/otelchi"
+	echojwt "github.com/labstack/echo-jwt/v4"
+	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric"
 	stdout "go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
@@ -16,6 +18,8 @@ import (
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
+	oteltrace "go.opentelemetry.io/otel/trace"
 	"log"
 	"log/slog"
 	"net/http"
@@ -23,10 +27,6 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
-
-	otelchimetric "github.com/riandyrn/otelchi/metric"
-	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
-	oteltrace "go.opentelemetry.io/otel/trace"
 )
 
 var tracer oteltrace.Tracer
@@ -36,16 +36,16 @@ const (
 )
 
 type Server struct {
-	cfg      *config.Config
-	lg       *slog.Logger
-	services *services.Services
+	cfg *config.Config
+	sh  *handlers.ServerHandler
+	lg  *slog.Logger
 }
 
-func New(cfg *config.Config, logger *slog.Logger, services *services.Services) *Server {
+func New(lg *slog.Logger, cfg *config.Config, sh *handlers.ServerHandler) *Server {
 	return &Server{
-		services: services,
-		cfg:      cfg,
-		lg:       logger,
+		cfg: cfg,
+		sh:  sh,
+		lg:  lg,
 	}
 }
 
@@ -64,23 +64,22 @@ func (s *Server) Run() {
 	mp := initMeter()
 	otel.SetMeterProvider(mp)
 
-	baseCfg := otelchimetric.NewBaseConfig(serverName, otelchimetric.WithMeterProvider(mp))
+	e := echo.New()
 
-	r := chi.NewRouter()
+	e.Use(middleware.Recover())
+	e.Use(middleware.TimeoutWithConfig(middleware.TimeoutConfig{
+		Timeout: 30 * time.Second,
+	}))
+	e.Use(otelecho.Middleware("chetam"))
+	//e.Use(jwtMiddleware(s.cfg))
 
-	r.Use(middleware.Timeout(30 * time.Second))
-	r.Use(
-		otelchi.Middleware(serverName, otelchi.WithChiRoutes(r)),
-		otelchimetric.NewRequestDurationMillis(baseCfg),
-		otelchimetric.NewRequestInFlight(baseCfg),
-		otelchimetric.NewResponseSizeBytes(baseCfg),
-	)
-	r.Route("/api/v1", func(r chi.Router) {
-		r.Get("/register", handlers.Register(s.lg, s.services))
-		r.Get("/auth", handlers.Auth(s.lg, s.services))
-	})
-
-	//r.Get("/swagger/*", httpSwagger.Handler(
+	apiGroup := e.Group("/api", jwtMiddleware(s.cfg))
+	apiGroup.Use(jwtMiddleware(s.cfg))
+	//chetamApiv1.RegisterHandlers(apiGroup, &chetamApiv1.ServerInterfaceWrapper{
+	//	Handler: s.sh,
+	//})
+	chetamApiv1.RegisterHandlersWithBaseURL(e, s.sh, "")
+	//e.GET("/swagger/*", httpSwagger.Handler(
 	//	httpSwagger.URL(fmt.Sprintf("http://%s/swagger/doc.json", s.cfg.Address)),
 	//))
 
@@ -90,23 +89,11 @@ func (s *Server) Run() {
 	done := make(chan os.Signal, 1)
 	signal.Notify(done, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
 
-	srv := &http.Server{
-		Addr:         ":" + s.cfg.Server.Port,
-		Handler:      r,
-		ReadTimeout:  5 * time.Second,
-		WriteTimeout: 5 * time.Second,
-		IdleTimeout:  30 * time.Second,
-	}
-
 	go func() {
-		if err := srv.ListenAndServe(); err != nil {
-			s.lg.Debug("server error",
+		if err := e.Start(":" + s.cfg.Server.Port); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			s.lg.Error("failed to start server",
 				slog.String("error", err.Error()),
 			)
-
-			if !errors.Is(err, http.ErrServerClosed) {
-				s.lg.Error("failed to start server")
-			}
 		}
 	}()
 
@@ -118,7 +105,7 @@ func (s *Server) Run() {
 	<-done
 	s.lg.Info("shutting down server")
 
-	if err := srv.Shutdown(ctx); err != nil {
+	if err := e.Shutdown(ctx); err != nil {
 		s.lg.Error("failed to shutdown server")
 	}
 
@@ -155,4 +142,27 @@ func initMeter() *sdkmetric.MeterProvider {
 	return sdkmetric.NewMeterProvider(
 		sdkmetric.WithReader(sdkmetric.NewPeriodicReader(exp)),
 	)
+}
+
+func jwtMiddleware(cfg *config.Config) echo.MiddlewareFunc {
+	config := jwtConfig(cfg)
+	return echojwt.WithConfig(config)
+}
+
+func jwtConfig(cfg *config.Config) echojwt.Config {
+	e := model.Error{
+		Errors: "Ошбика авторизации",
+	}
+
+	return echojwt.Config{
+		SigningKey: []byte(cfg.Jwt.SecretKey),
+		ContextKey: "token",
+		ErrorHandler: func(c echo.Context, err error) error {
+			slog.Info("failed to validate token",
+				slog.String("error", err.Error()),
+			)
+
+			return c.JSON(http.StatusUnauthorized, e)
+		},
+	}
 }

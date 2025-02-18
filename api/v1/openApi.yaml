@@ -3,6 +3,9 @@ info:
   title: chetam app API
   version: 1.0.0
 
+security:
+  - BearerAuth: [ ]
+
 tags:
   - name: Auth
     description: register & login

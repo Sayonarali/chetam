@@ -3,7 +3,6 @@ package server
 import (
 	"chetam/internal/config"
 	"chetam/internal/model"
-	chetamApiv1 "chetam/internal/server/client/v1"
 	"chetam/internal/server/handlers"
 	"context"
 	"errors"
@@ -71,14 +70,14 @@ func (s *Server) Run() {
 		Timeout: 30 * time.Second,
 	}))
 	e.Use(otelecho.Middleware("chetam"))
-	//e.Use(jwtMiddleware(s.cfg))
 
-	apiGroup := e.Group("/api", jwtMiddleware(s.cfg))
+	e.POST("/auth/register", s.sh.Register)
+	e.POST("/auth/login", s.sh.Login)
+
+	apiGroup := e.Group("/api/v1")
 	apiGroup.Use(jwtMiddleware(s.cfg))
-	//chetamApiv1.RegisterHandlers(apiGroup, &chetamApiv1.ServerInterfaceWrapper{
-	//	Handler: s.sh,
-	//})
-	chetamApiv1.RegisterHandlersWithBaseURL(e, s.sh, "")
+	apiGroup.GET("/user", s.sh.GetUser)
+
 	//e.GET("/swagger/*", httpSwagger.Handler(
 	//	httpSwagger.URL(fmt.Sprintf("http://%s/swagger/doc.json", s.cfg.Address)),
 	//))

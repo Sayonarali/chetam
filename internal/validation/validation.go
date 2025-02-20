@@ -1,7 +1,12 @@
 package validation
 
-import chetamApiv1 "chetam/internal/server/client/v1"
+import (
+	"chetam/internal/model"
+	"github.com/go-playground/validator/v10"
+)
 
-func ValidateAuthRequest(req chetamApiv1.RegisterRequest) error {
-	return nil
+func ValidateAuthRequest(req model.RegisterRequest) error {
+	v := validator.New(validator.WithRequiredStructEnabled())
+
+	return v.Struct(req)
 }

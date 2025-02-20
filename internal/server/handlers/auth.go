@@ -1,20 +1,25 @@
 package handlers
 
 import (
-	chetamApiv1 "chetam/internal/server/client/v1"
+	"chetam/internal/model"
 	"chetam/internal/validation"
 	"github.com/labstack/echo/v4"
 	"net/http"
 )
 
-func (sh *ServerHandler) PostApiV1AuthRegister(c echo.Context) error {
-	var req chetamApiv1.RegisterRequest
+func (sh *ServerHandler) Register(c echo.Context) error {
+	var req model.RegisterRequest
 
 	if err := c.Bind(&req); err != nil {
 		return c.JSON(http.StatusBadRequest, err)
 	}
 
 	err := validation.ValidateAuthRequest(req)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, err)
+	}
+
+	_, err = sh.services.Auth.FindUserByLogin(req.Login)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, err)
 	}
@@ -26,6 +31,6 @@ func (sh *ServerHandler) PostApiV1AuthRegister(c echo.Context) error {
 	return nil
 }
 
-func (sh *ServerHandler) PostApiV1AuthLogin(c echo.Context) error {
+func (sh *ServerHandler) Login(c echo.Context) error {
 	return c.JSON(http.StatusBadGateway, "fsddsfs")
 }

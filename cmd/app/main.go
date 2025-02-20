@@ -6,6 +6,7 @@ import (
 	"chetam/internal/server"
 	"chetam/internal/server/handlers"
 	"chetam/internal/services"
+	"chetam/internal/services/auth"
 	"chetam/internal/transport/repository"
 	"chetam/pkg/logger"
 	"fmt"
@@ -35,8 +36,8 @@ func main() {
 
 	repo := repository.New(lg, client)
 	fmt.Println(repo)
-	//a := auth.New(cfg, lg, repo)
-	s := services.New(lg)
+	a := auth.New(cfg, lg, repo)
+	s := services.New(lg, a)
 
 	handler := handlers.New(lg, s)
 	srv := server.New(lg, cfg, handler)

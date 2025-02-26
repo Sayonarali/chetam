@@ -8,7 +8,7 @@ import (
 )
 
 func (r *Repository) FindUserByLogin(login string) (model.User, error) {
-	querry := qb.Select(
+	query := qb.Select(
 		"id",
 		"login",
 		"email",
@@ -18,7 +18,7 @@ func (r *Repository) FindUserByLogin(login string) (model.User, error) {
 			"login": login,
 		})
 
-	sql, args, err := querry.ToSql()
+	sql, args, err := query.ToSql()
 	if err != nil {
 		return model.User{}, err
 	}

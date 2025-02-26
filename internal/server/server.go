@@ -4,6 +4,7 @@ import (
 	"chetam/internal/config"
 	"chetam/internal/model"
 	"chetam/internal/server/handlers"
+	"chetam/internal/services"
 	"context"
 	"errors"
 	echojwt "github.com/labstack/echo-jwt/v4"
@@ -35,16 +36,16 @@ const (
 )
 
 type Server struct {
-	cfg *config.Config
-	sh  *handlers.ServerHandler
-	lg  *slog.Logger
+	cfg      *config.Config
+	lg       *slog.Logger
+	services *services.Services
 }
 
-func New(lg *slog.Logger, cfg *config.Config, sh *handlers.ServerHandler) *Server {
+func New(lg *slog.Logger, cfg *config.Config, services *services.Services) *Server {
 	return &Server{
-		cfg: cfg,
-		sh:  sh,
-		lg:  lg,
+		cfg:      cfg,
+		lg:       lg,
+		services: services,
 	}
 }
 
@@ -71,12 +72,12 @@ func (s *Server) Run() {
 	}))
 	e.Use(otelecho.Middleware("chetam"))
 
-	e.POST("/auth/register", s.sh.Register)
-	e.POST("/auth/login", s.sh.Login)
+	e.POST("/auth/register", handlers.Register(s.lg, s.services.Auth))
+	e.POST("/auth/login", handlers.Login(s.lg, s.services.Auth))
 
 	apiGroup := e.Group("/api/v1")
 	apiGroup.Use(jwtMiddleware(s.cfg))
-	apiGroup.GET("/user", s.sh.GetUser)
+	apiGroup.GET("/user", handlers.GetUser(s.lg))
 
 	//e.GET("/swagger/*", httpSwagger.Handler(
 	//	httpSwagger.URL(fmt.Sprintf("http://%s/swagger/doc.json", s.cfg.Address)),

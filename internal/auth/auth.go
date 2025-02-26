@@ -104,5 +104,4 @@ func (a *Auth) GenerateCode(w http.ResponseWriter, r *http.Request) {
 		log.Fatal("Error reading response body:", err)
 	}
 	fmt.Println("Response:", string(body))
-
 }

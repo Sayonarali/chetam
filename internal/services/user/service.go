@@ -6,19 +6,19 @@ import (
 	"log/slog"
 )
 
-type Service struct {
+type UserService struct {
 	lg   *slog.Logger
 	repo *repository.Repository
 }
 
-func New(lg *slog.Logger, repo *repository.Repository) *Service {
-	return &Service{
+func New(lg *slog.Logger, repo *repository.Repository) *UserService {
+	return &UserService{
 		lg:   lg,
 		repo: repo,
 	}
 }
 
-func (s *Service) GetUserByLogin(login string) (chetamApiv1.User, error) {
+func (s *UserService) GetUserByLogin(login string) (chetamApiv1.User, error) {
 	user, err := s.repo.FindUserByLogin(login)
 	if err != nil {
 		s.lg.Warn("user not found",

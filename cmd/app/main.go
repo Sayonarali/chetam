@@ -1,15 +1,14 @@
 package main
 
 import (
+	"chetam/internal/auth"
 	"chetam/internal/config"
 	"chetam/internal/db/client/postgres"
 	"chetam/internal/server"
-	"chetam/internal/server/handlers"
 	"chetam/internal/services"
-	"chetam/internal/services/auth"
+	"chetam/internal/services/user"
 	"chetam/internal/transport/repository"
 	"chetam/pkg/logger"
-	"fmt"
 	"log/slog"
 	"os"
 )
@@ -35,12 +34,11 @@ func main() {
 	}
 
 	repo := repository.New(lg, client)
-	fmt.Println(repo)
 	a := auth.New(cfg, lg, repo)
-	s := services.New(lg, a)
+	userService := user.New(lg, repo)
+	s := services.New(lg, a, userService)
 
-	handler := handlers.New(lg, s)
-	srv := server.New(lg, cfg, handler)
+	srv := server.New(lg, cfg, s)
 
 	srv.Run()
 }

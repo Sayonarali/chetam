@@ -7,7 +7,7 @@ import (
 )
 
 func (r *Repository) CreateUser(email, login, password string) (model.User, error) {
-	querry := qb.Insert("users").
+	query := qb.Insert("users").
 		Columns(
 			"login",
 			"email",
@@ -19,7 +19,7 @@ func (r *Repository) CreateUser(email, login, password string) (model.User, erro
 			password,
 		)
 
-	sql, args, err := querry.ToSql()
+	sql, args, err := query.ToSql()
 	if err != nil {
 		return model.User{}, err
 	}

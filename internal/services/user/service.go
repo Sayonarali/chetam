@@ -1,8 +1,8 @@
 package user
 
 import (
+	"chetam/internal/repository"
 	chetamApiv1 "chetam/internal/server/client/v1"
-	"chetam/internal/transport/repository"
 	"log/slog"
 )
 

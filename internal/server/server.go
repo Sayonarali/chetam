@@ -11,16 +11,7 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho"
-	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric"
-	stdout "go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
-	"go.opentelemetry.io/otel/propagation"
-	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
-	"go.opentelemetry.io/otel/sdk/resource"
-	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
 	oteltrace "go.opentelemetry.io/otel/trace"
-	"log"
 	"log/slog"
 	"net/http"
 	"os"
@@ -50,20 +41,6 @@ func New(lg *slog.Logger, cfg *config.Config, services *services.Services) *Serv
 }
 
 func (s *Server) Run() {
-	tp := initTracerProvider()
-	defer func() {
-		if err := tp.Shutdown(context.Background()); err != nil {
-			log.Printf("Error shutting down tracer provider: %v", err)
-		}
-	}()
-	otel.SetTracerProvider(tp)
-	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(propagation.TraceContext{}, propagation.Baggage{}))
-
-	tracer = otel.Tracer("mux-server")
-
-	mp := initMeter()
-	otel.SetMeterProvider(mp)
-
 	e := echo.New()
 
 	e.Use(middleware.Recover())
@@ -71,6 +48,7 @@ func (s *Server) Run() {
 		Timeout: 30 * time.Second,
 	}))
 	e.Use(otelecho.Middleware("chetam"))
+	e.Use(middleware.Logger())
 
 	e.POST("/auth/register", handlers.Register(s.lg, s.services.Auth))
 	e.POST("/auth/login", handlers.Login(s.lg, s.services.Auth))
@@ -110,38 +88,6 @@ func (s *Server) Run() {
 	}
 
 	s.lg.Info("server shutdown")
-}
-
-func initTracerProvider() *sdktrace.TracerProvider {
-	exporter, err := stdout.New(stdout.WithPrettyPrint())
-	if err != nil {
-		log.Fatal(err)
-	}
-	res, err := resource.New(
-		context.Background(),
-		resource.WithAttributes(
-			semconv.ServiceNameKey.String("mux-server"),
-		),
-	)
-	if err != nil {
-		log.Fatalf("unable to initialize resource due: %v", err)
-	}
-	return sdktrace.NewTracerProvider(
-		sdktrace.WithSampler(sdktrace.AlwaysSample()),
-		sdktrace.WithBatcher(exporter),
-		sdktrace.WithResource(res),
-	)
-}
-
-func initMeter() *sdkmetric.MeterProvider {
-	exp, err := stdoutmetric.New()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	return sdkmetric.NewMeterProvider(
-		sdkmetric.WithReader(sdkmetric.NewPeriodicReader(exp)),
-	)
 }
 
 func jwtMiddleware(cfg *config.Config) echo.MiddlewareFunc {

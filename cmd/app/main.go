@@ -2,12 +2,12 @@ package main
 
 import (
 	"chetam/internal/auth"
+	"chetam/internal/client"
 	"chetam/internal/config"
-	"chetam/internal/db/client/postgres"
+	"chetam/internal/repository"
 	"chetam/internal/server"
 	"chetam/internal/services"
 	"chetam/internal/services/user"
-	"chetam/internal/transport/repository"
 	"chetam/pkg/logger"
 	"log/slog"
 	"os"
@@ -25,7 +25,7 @@ func main() {
 		)
 	}
 
-	client, err := postgres.NewClient(cfg)
+	client, err := client.NewClient(cfg)
 	if err != nil {
 		lg.Error("failed to connect to database",
 			slog.String("error", err.Error()))

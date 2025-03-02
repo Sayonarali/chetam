@@ -1,4 +1,4 @@
-package postgres
+package client
 
 import (
 	"chetam/internal/config"

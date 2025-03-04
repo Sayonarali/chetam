@@ -20,5 +20,5 @@ type LoginResponse struct {
 }
 
 type Error struct {
-	Errors string `json:"errors"`
+	Msg string `json:"error"`
 }

@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"chetam/internal/model"
-	"chetam/internal/validation"
 	"github.com/labstack/echo/v4"
 	"log/slog"
 	"net/http"
@@ -16,23 +15,32 @@ type AuthInterface interface {
 func Register(logger *slog.Logger, auth AuthInterface) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		var req model.RegisterRequest
+		var errorMsg string
 
 		if err := c.Bind(&req); err != nil {
-
-			logger.Error("error binding request", err)
-			return c.JSON(http.StatusBadRequest, err)
+			errorMsg = err.Error()
+			logger.Error("binding request", slog.String("error", errorMsg))
+			return c.JSON(http.StatusBadRequest, model.Error{
+				Msg: errorMsg,
+			})
 		}
 
-		err := validation.ValidateRegisterRequest(req)
+		err := req.Validate()
 		if err != nil {
-			logger.Error("error validating request", err)
-			return c.JSON(http.StatusBadRequest, err)
+			errorMsg = err.Error()
+			logger.Error("validating request", slog.String("error", errorMsg))
+			return c.JSON(http.StatusBadRequest, model.Error{
+				Msg: errorMsg,
+			})
 		}
 
 		token, err := auth.CreateUser(req)
 		if err != nil {
-			logger.Error("error creating token", err)
-			return c.JSON(http.StatusInternalServerError, err)
+			errorMsg = err.Error()
+			logger.Error("creating user", slog.String("error", errorMsg))
+			return c.JSON(http.StatusInternalServerError, model.Error{
+				Msg: errorMsg,
+			})
 		}
 		var resp model.RegisterResponse
 
@@ -45,18 +53,31 @@ func Register(logger *slog.Logger, auth AuthInterface) echo.HandlerFunc {
 func Login(logger *slog.Logger, auth AuthInterface) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		var req model.LoginRequest
+		var errorMsg string
 
 		if err := c.Bind(&req); err != nil {
-			return c.JSON(http.StatusBadRequest, err)
+			errorMsg = err.Error()
+			logger.Error("binding request", slog.String("error", errorMsg))
+			return c.JSON(http.StatusBadRequest, model.Error{
+				Msg: errorMsg,
+			})
 		}
 
-		err := validation.ValidateLoginRequest(req)
+		err := req.Validate()
 		if err != nil {
-			return c.JSON(http.StatusBadRequest, err)
+			errorMsg = err.Error()
+			logger.Error("validating request", slog.String("error", errorMsg))
+			return c.JSON(http.StatusBadRequest, model.Error{
+				Msg: errorMsg,
+			})
 		}
 		token, err := auth.UserToken(req)
 		if err != nil {
-			return c.JSON(http.StatusInternalServerError, err)
+			errorMsg = err.Error()
+			logger.Error("creating token", slog.String("error", errorMsg))
+			return c.JSON(http.StatusInternalServerError, model.Error{
+				Msg: errorMsg,
+			})
 		}
 		var resp model.LoginResponse
 

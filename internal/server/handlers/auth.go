@@ -15,32 +15,34 @@ type AuthInterface interface {
 func Register(logger *slog.Logger, auth AuthInterface) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		var req model.RegisterRequest
-		var errorMsg string
+		var e model.Error
 
 		if err := c.Bind(&req); err != nil {
-			errorMsg = err.Error()
-			logger.Error("binding request", slog.String("error", errorMsg))
-			return c.JSON(http.StatusBadRequest, model.Error{
-				Msg: errorMsg,
-			})
+			e = model.Error{
+				Msg: model.ErrInvalidJson,
+			}
+
+			logger.Error(e.Msg, slog.String("error", err.Error()))
+			return c.JSON(http.StatusBadRequest, e)
 		}
 
 		err := req.Validate()
 		if err != nil {
-			errorMsg = err.Error()
-			logger.Error("validating request", slog.String("error", errorMsg))
-			return c.JSON(http.StatusBadRequest, model.Error{
-				Msg: errorMsg,
-			})
+			e = model.Error{
+				Msg: err.Error(),
+			}
+
+			logger.Error(e.Msg, slog.String("error", err.Error()))
+			return c.JSON(http.StatusBadRequest, e)
 		}
 
 		token, err := auth.CreateUser(req)
 		if err != nil {
-			errorMsg = err.Error()
-			logger.Error("creating user", slog.String("error", errorMsg))
-			return c.JSON(http.StatusInternalServerError, model.Error{
-				Msg: errorMsg,
-			})
+			e = model.Error{
+				Msg: model.ErrNotUniqueUser,
+			}
+			logger.Error(e.Msg, slog.String("error", err.Error()))
+			return c.JSON(http.StatusBadRequest, e)
 		}
 		var resp model.RegisterResponse
 
@@ -53,31 +55,34 @@ func Register(logger *slog.Logger, auth AuthInterface) echo.HandlerFunc {
 func Login(logger *slog.Logger, auth AuthInterface) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		var req model.LoginRequest
-		var errorMsg string
+		var e model.Error
 
 		if err := c.Bind(&req); err != nil {
-			errorMsg = err.Error()
-			logger.Error("binding request", slog.String("error", errorMsg))
-			return c.JSON(http.StatusBadRequest, model.Error{
-				Msg: errorMsg,
-			})
+			e = model.Error{
+				Msg: model.ErrInvalidJson,
+			}
+
+			logger.Error(e.Msg, slog.String("error", err.Error()))
+			return c.JSON(http.StatusBadRequest, e)
 		}
 
 		err := req.Validate()
 		if err != nil {
-			errorMsg = err.Error()
-			logger.Error("validating request", slog.String("error", errorMsg))
-			return c.JSON(http.StatusBadRequest, model.Error{
-				Msg: errorMsg,
-			})
+			e = model.Error{
+				Msg: err.Error(),
+			}
+
+			logger.Error(e.Msg, slog.String("error", err.Error()))
+			return c.JSON(http.StatusBadRequest, e)
 		}
+
 		token, err := auth.UserToken(req)
 		if err != nil {
-			errorMsg = err.Error()
-			logger.Error("creating token", slog.String("error", errorMsg))
-			return c.JSON(http.StatusInternalServerError, model.Error{
-				Msg: errorMsg,
-			})
+			e = model.Error{
+				Msg: model.ErrInternal,
+			}
+			logger.Error(e.Msg, slog.String("error", err.Error()))
+			return c.JSON(http.StatusBadRequest, e)
 		}
 		var resp model.LoginResponse
 

@@ -16,9 +16,9 @@ func (m *RegisterRequest) Validate() error {
 			for _, fieldErr := range validationErrors {
 				switch fieldErr.Tag() {
 				case "email":
-					return fmt.Errorf("Поле %s должно быть валидным email адресом\n", fieldErr.Field())
+					return fmt.Errorf("поле %s должно быть валидным email адресом", fieldErr.Field())
 				default:
-					return fmt.Errorf("Ошибка валидации для поля %s: %s\n", fieldErr.Field(), fieldErr.Tag())
+					return fmt.Errorf("ошибка валидации для поля %s: %s", fieldErr.Field(), fieldErr.Tag())
 				}
 			}
 		}

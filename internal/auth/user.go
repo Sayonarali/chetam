@@ -3,16 +3,18 @@ package auth
 import (
 	"chetam/internal/model"
 	"fmt"
+	"golang.org/x/crypto/bcrypt"
 	"log/slog"
 )
 
 func (a *Auth) CreateUser(req model.RegisterRequest) (string, error) {
-	_, err := a.repo.CreateUser(req.Email, req.Login, req.Password)
+	passHash, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+	user, err := a.repo.CreateUser(req.Email, req.Login, string(passHash))
 	if err != nil {
 		return "", err
 	}
 
-	token, err := a.generateJWT(req.Login)
+	token, err := a.generateJWT(user.Id)
 	if err != nil {
 		return "", err
 	}
@@ -25,11 +27,14 @@ func (a *Auth) UserToken(req model.LoginRequest) (string, error) {
 		a.lg.Warn("user not found",
 			slog.String("error", err.Error()))
 		return "", err
-	} else if user.Password != req.Password {
+	}
+
+	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.Password))
+	if err != nil {
 		return "", fmt.Errorf("password incorrect")
 	}
 
-	token, err := a.generateJWT(user.Login)
+	token, err := a.generateJWT(user.Id)
 	if err != nil {
 		return "", err
 	}

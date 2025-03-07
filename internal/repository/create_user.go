@@ -3,7 +3,6 @@ package repository
 import (
 	"chetam/internal/model"
 	"context"
-	"time"
 )
 
 func (r *Repository) CreateUser(email, login, password string) (model.User, error) {
@@ -24,17 +23,10 @@ func (r *Repository) CreateUser(email, login, password string) (model.User, erro
 		return model.User{}, err
 	}
 
-	_, err = r.db.Exec(context.Background(), sql, args...)
+	user := model.User{}
+	err = r.db.QueryRow(context.Background(), sql, args...).Scan(&user.Id, &user.Login, &user.Email, &user.Password)
 	if err != nil {
-		return model.User{}, err
-	}
-
-	user := model.User{
-		Login:     login,
-		Email:     email,
-		Password:  password,
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
+		return user, err
 	}
 
 	return user, nil

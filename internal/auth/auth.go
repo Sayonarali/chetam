@@ -24,13 +24,13 @@ func New(cfg *config.Config, lg *slog.Logger, repo *repository.Repository) *Auth
 }
 
 type Claims struct {
-	Login string `json:"login"`
+	Id int `json:"id"`
 	jwt.RegisteredClaims
 }
 
-func (a *Auth) generateJWT(login string) (string, error) {
+func (a *Auth) generateJWT(id int) (string, error) {
 	claims := Claims{
-		Login: login,
+		Id: id,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(72 * time.Hour)),
 		},
@@ -59,28 +59,3 @@ func (a *Auth) ValidateToken(tokenString string) (*Claims, error) {
 		return nil, fmt.Errorf("invalid token")
 	}
 }
-
-//
-//func (a *Auth) GenerateCode(w http.ResponseWriter, r *http.Request) {
-//	baseUrl := "https://sms.ru/sms/send"
-//
-//	u, _ := url.Parse(baseUrl)
-//	params := url.Values{}
-//	params.Add("api_id", a.cfg.Jwt.Sms)
-//	params.Add("to", a.cfg.Jwt.Phone)
-//	params.Add("msg", "hi")
-//	params.Add("json", "1")
-//	u.RawQuery = params.Encode()
-//	// Отправляем GET-запрос
-//	resp, err := http.Get(u.String())
-//	if err != nil {
-//		log.Fatal("Error sending GET request:", err)
-//	}
-//	defer resp.Body.Close()
-//	// Чтение ответа
-//	body, err := io.ReadAll(resp.Body)
-//	if err != nil {
-//		log.Fatal("Error reading response body:", err)
-//	}
-//	fmt.Println("Response:", string(body))
-//}

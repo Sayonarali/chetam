@@ -96,14 +96,13 @@ func jwtMiddleware(cfg *config.Config) echo.MiddlewareFunc {
 }
 
 func jwtConfig(cfg *config.Config) echojwt.Config {
-	e := model.Error{
-		Errors: "Ошбика авторизации",
-	}
-
 	return echojwt.Config{
 		SigningKey: []byte(cfg.Jwt.SecretKey),
 		ContextKey: "token",
 		ErrorHandler: func(c echo.Context, err error) error {
+			e := model.Error{
+				Msg: "failed to validate token",
+			}
 			slog.Info("failed to validate token",
 				slog.String("error", err.Error()),
 			)

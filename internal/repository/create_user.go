@@ -16,7 +16,8 @@ func (r *Repository) CreateUser(email, login, password string) (model.User, erro
 			login,
 			email,
 			password,
-		)
+		).
+		Suffix("RETURNING id, login, email, password")
 
 	sql, args, err := query.ToSql()
 	if err != nil {

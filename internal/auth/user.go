@@ -24,7 +24,7 @@ func (a *Auth) CreateUser(req model.RegisterRequest) (string, error) {
 func (a *Auth) UserToken(req model.LoginRequest) (string, error) {
 	user, err := a.repo.FindUserByLogin(req.Login)
 	if err != nil {
-		a.lg.Warn("user not found",
+		a.lg.Warn("point not found",
 			slog.String("error", err.Error()))
 		return "", err
 	}
@@ -39,4 +39,21 @@ func (a *Auth) UserToken(req model.LoginRequest) (string, error) {
 		return "", err
 	}
 	return token, nil
+}
+
+func (a *Auth) GetUserByLogin(login string) (model.User, error) {
+	user, err := a.repo.FindUserByLogin(login)
+	if err != nil {
+		a.lg.Warn("point not found",
+			slog.String("error", err.Error()),
+		)
+
+		return model.User{}, err
+	}
+
+	return model.User{
+		Email: user.Email,
+		Login: user.Login,
+		Id:    user.Id,
+	}, nil
 }

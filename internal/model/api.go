@@ -19,6 +19,6 @@ type LoginResponse struct {
 	Token string `json:"token,omitempty"`
 }
 
-type Error struct {
-	Msg string `json:"error"`
+type GetRoutesListResponse struct {
+	Token string `json:"token,omitempty"`
 }

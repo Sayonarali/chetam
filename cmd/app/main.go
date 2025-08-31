@@ -7,7 +7,8 @@ import (
 	"chetam/internal/repository"
 	"chetam/internal/server"
 	"chetam/internal/services"
-	"chetam/internal/services/user"
+	"chetam/internal/services/point"
+	"chetam/internal/services/route"
 	"chetam/pkg/logger"
 	"log/slog"
 	"os"
@@ -25,7 +26,7 @@ func main() {
 		)
 	}
 
-	client, err := client.NewClient(cfg)
+	cl, err := client.NewClient(cfg)
 	if err != nil {
 		lg.Error("failed to connect to database",
 			slog.String("error", err.Error()))
@@ -33,10 +34,11 @@ func main() {
 		os.Exit(1)
 	}
 
-	repo := repository.New(lg, client)
+	repo := repository.New(lg, cl)
 	a := auth.New(cfg, lg, repo)
-	userService := user.New(lg, repo)
-	s := services.New(lg, a, userService)
+	routes := route.New(lg, repo)
+	points := point.New(lg, repo)
+	s := services.New(lg, a, routes, points)
 
 	srv := server.New(lg, cfg, s)
 

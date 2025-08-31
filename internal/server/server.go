@@ -10,20 +10,12 @@ import (
 	echojwt "github.com/labstack/echo-jwt/v4"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
-	"go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho"
-	oteltrace "go.opentelemetry.io/otel/trace"
 	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
-)
-
-var tracer oteltrace.Tracer
-
-const (
-	serverName = "chetam"
 )
 
 type Server struct {
@@ -47,15 +39,23 @@ func (s *Server) Run() {
 	e.Use(middleware.TimeoutWithConfig(middleware.TimeoutConfig{
 		Timeout: 30 * time.Second,
 	}))
-	e.Use(otelecho.Middleware("chetam"))
 	e.Use(middleware.Logger())
+	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
+		AllowOrigins: []string{"*"},
+		AllowMethods: []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete},
+		AllowHeaders: []string{echo.HeaderOrigin, echo.HeaderContentType, echo.HeaderAccept, echo.HeaderAuthorization},
+	}))
 
 	e.POST("/auth/register", handlers.Register(s.lg, s.services.Auth))
 	e.POST("/auth/login", handlers.Login(s.lg, s.services.Auth))
 
 	apiGroup := e.Group("/api/v1")
-	apiGroup.Use(jwtMiddleware(s.cfg))
-	apiGroup.GET("/user", handlers.GetUser(s.lg))
+	//apiGroup.Use(jwtMiddleware(s.cfg))
+	apiGroup.GET("/point", handlers.GetUser(s.lg))
+
+	routesGroup := apiGroup.Group("/routes")
+	routesGroup.GET("", handlers.GetRoutesList(s.lg, s.services.Route))
+	routesGroup.GET("/:id", handlers.GetRoute(s.lg, s.services.Route))
 
 	//e.GET("/swagger/*", httpSwagger.Handler(
 	//	httpSwagger.URL(fmt.Sprintf("http://%s/swagger/doc.json", s.cfg.Address)),
@@ -101,7 +101,7 @@ func jwtConfig(cfg *config.Config) echojwt.Config {
 		ContextKey: "token",
 		ErrorHandler: func(c echo.Context, err error) error {
 			e := model.Error{
-				Msg: "failed to validate token",
+				Error: "failed to validate token",
 			}
 			slog.Info("failed to validate token",
 				slog.String("error", err.Error()),

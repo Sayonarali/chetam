@@ -1,16 +1,24 @@
-# Официальный образ Go
-FROM golang:1.23.2
+FROM golang:1.24.5 AS builder
 
-# Рабочая директория внутри контейнера
+# Копируем сначала только модули для кэширования
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Рабочая директория = корень проекта
 WORKDIR /app
 
-# Копируем файлы проекта в контейнер
+# Копируем весь проект
 COPY . .
-RUN go mod tidy
 
-RUN go build -o /app/main ./cmd/app
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o chetam ./cmd/app/.
 
-# Открываем порт
-EXPOSE 8080
+FROM alpine:3.20
 
-CMD ["./main"]
+WORKDIR /usr/bin
+
+COPY --from=builder /app/chetam /usr/bin/chetam
+
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+ENTRYPOINT ["/entrypoint.sh"]

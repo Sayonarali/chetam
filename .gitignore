@@ -3,3 +3,4 @@ bin/
 .env
 .idea
 wire_gen.go
+./sh

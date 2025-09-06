@@ -51,7 +51,9 @@ func (s *Server) Run() {
 
 	apiGroup := e.Group("/api/v1")
 	//apiGroup.Use(jwtMiddleware(s.cfg))
-	apiGroup.GET("/point", handlers.GetUser(s.lg))
+
+	pointsGroup := apiGroup.Group("/points")
+	pointsGroup.GET("", handlers.GetUser(s.lg))
 
 	routesGroup := apiGroup.Group("/routes")
 	routesGroup.GET("", handlers.GetRoutesList(s.lg, s.services.Route))

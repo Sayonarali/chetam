@@ -19,29 +19,29 @@ func Register(logger *slog.Logger, auth AuthInterface) echo.HandlerFunc {
 
 		if err := c.Bind(&req); err != nil {
 			e = model.Error{
-				Msg: model.ErrInvalidJson,
+				Error: model.ErrInvalidJson,
 			}
 
-			logger.Error(e.Msg, slog.String("error", err.Error()))
+			logger.Error(e.Error, slog.String("error", err.Error()))
 			return c.JSON(http.StatusBadRequest, e)
 		}
 
 		err := req.Validate()
 		if err != nil {
 			e = model.Error{
-				Msg: err.Error(),
+				Error: err.Error(),
 			}
 
-			logger.Error(e.Msg, slog.String("error", err.Error()))
+			logger.Error(e.Error, slog.String("error", err.Error()))
 			return c.JSON(http.StatusBadRequest, e)
 		}
 
 		token, err := auth.CreateUser(req)
 		if err != nil {
 			e = model.Error{
-				Msg: model.ErrNotUniqueUser,
+				Error: model.ErrNotUniqueUser,
 			}
-			logger.Error(e.Msg, slog.String("error", err.Error()))
+			logger.Error(e.Error, slog.String("error", err.Error()))
 			return c.JSON(http.StatusBadRequest, e)
 		}
 		var resp model.RegisterResponse
@@ -59,29 +59,29 @@ func Login(logger *slog.Logger, auth AuthInterface) echo.HandlerFunc {
 
 		if err := c.Bind(&req); err != nil {
 			e = model.Error{
-				Msg: model.ErrInvalidJson,
+				Error: model.ErrInvalidJson,
 			}
 
-			logger.Error(e.Msg, slog.String("error", err.Error()))
+			logger.Error(e.Error, slog.String("error", err.Error()))
 			return c.JSON(http.StatusBadRequest, e)
 		}
 
 		err := req.Validate()
 		if err != nil {
 			e = model.Error{
-				Msg: err.Error(),
+				Error: err.Error(),
 			}
 
-			logger.Error(e.Msg, slog.String("error", err.Error()))
+			logger.Error(e.Error, slog.String("error", err.Error()))
 			return c.JSON(http.StatusBadRequest, e)
 		}
 
 		token, err := auth.UserToken(req)
 		if err != nil {
 			e = model.Error{
-				Msg: model.ErrInternal,
+				Error: model.ErrInternal,
 			}
-			logger.Error(e.Msg, slog.String("error", err.Error()))
+			logger.Error(e.Error, slog.String("error", err.Error()))
 			return c.JSON(http.StatusBadRequest, e)
 		}
 		var resp model.LoginResponse

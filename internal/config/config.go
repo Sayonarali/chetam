@@ -32,7 +32,7 @@ type JWT struct {
 }
 
 func Load() (*Config, error) {
-	if err := godotenv.Load("./.env"); err != nil {
+	if err := godotenv.Load(); err != nil {
 		return nil, fmt.Errorf("failed to load .env: %w", err)
 	}
 
